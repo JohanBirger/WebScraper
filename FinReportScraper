@@ -1,0 +1,123 @@
+package scraper;
+
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
+import javax.swing.*;
+import java.rmi.server.ExportException;
+
+/**
+ * Webscraper to collect information on future IPOs
+ *
+ * @author Johan Birgersson
+ */
+
+
+public class Scraper {
+
+
+    public static void main(String[] args) {
+        run();
+    }
+
+    public static void run() {
+        day_0();
+
+    }
+
+    /**
+     * Collects name of company under the date of listing
+     * new method for every new date
+     */
+    public static void day_0() {
+    }
+
+    public static void sendMail(String recipient) throws Exception {
+        System.out.println("Preparing message...");
+        Properties properties = new Properties();
+
+        properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+        properties.put("mail.smtp.host", "smtp.gmail.com");
+        properties.put("mail.smtp.port", "587");
+
+        String myAccountEmail = "xxxxxxxx";
+        String password = "xxxxxxxxx";
+
+        Session session = Session.getInstance(properties, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(myAccountEmail, password);
+            }
+        });
+        Message message = prepareMessage(session, myAccountEmail, recipient);
+
+        Transport.send(message);
+        System.out.println("Message sent.");
+
+    }
+
+    private static Message prepareMessage(Session session, String myAccountEmail, String recipient) {
+
+        String url = "https://www.avanza.se/placera/foretagskalendern.html";
+
+        try {
+            Document foretagskalendern = Jsoup.connect(url).userAgent("Jsoup Scraper").get();
+
+            for (Element row : foretagskalendern.select("div.companyCalendarListWrapper")) {
+                if (row.select("dd:nth-of-type(1)").text().equals("")) {
+                    continue;
+
+                } else {
+                    String day_0 = row.select("dt.bold:nth-of-type(2)").text();
+                    String comp_name_fullnoice = row.select("dd:nth-of-type(2)").text();
+                    String comp_name_noice = comp_name_fullnoice.replace("Delårsrapport", " ");
+                    String comp_name = comp_name_noice.replace("- ", "\n");
+
+                    String today_chunk = day_0 + "\n" + comp_name;
+                    System.out.println(today_chunk);
+
+                    try {
+                        Message message = new MimeMessage(session);
+                        message.setFrom(new InternetAddress(myAccountEmail));
+                        message.setRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
+                        message.setSubject("Rapportider -Delivered by JohanKoddarAB");
+                        message.setText("God afton, ethern levererar nu morgondagens rapporter" + today_chunk);
+                        return message;
+                    } catch (Exception ex) {
+                        Logger.getLogger(Scraper.class.getName()).log(Level.SEVERE, null, ex);
+
+                    }
+                    return null;
+
+                }
+
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
+
+
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+    //send mail
